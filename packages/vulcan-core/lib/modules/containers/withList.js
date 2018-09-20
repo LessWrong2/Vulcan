@@ -13,6 +13,7 @@ Options:
   - limit: the number of documents to show initially
   - pollInterval: how often the data should be updated, in ms (set to 0 to disable polling)
   - terms: an object that defines which documents to fetch
+  - preload: number of extra results to fetch
 
 Props Received:
 
@@ -55,6 +56,7 @@ const withList = (options) => {
     enableCache = false,
     extraQueries,
     ssr = false,
+    preload = 0,
   } = options;
 
   const collection = options.collection || getCollection(collectionName);
@@ -99,8 +101,9 @@ const withList = (options) => {
       // get initial limit from props, or else options
       const paginationLimit = props.terms && props.terms.limit || limit;
       const paginationTerms = {
-        limit: paginationLimit,
+        limit: paginationLimit + preload,
         itemsPerPage: paginationLimit,
+        displayLimit: paginationLimit,
       };
 
       return paginationTerms;
@@ -166,6 +169,11 @@ const withList = (options) => {
             // eslint-disable-next-line no-console
             console.log(error);
           }
+          
+          let displayLimit = props.ownProps.paginationTerms.displayLimit;
+          let resultsMinusPreload = results;
+          if(resultsMinusPreload && resultsMinusPreload.length > displayLimit)
+            resultsMinusPreload = _.take(resultsMinusPreload, displayLimit);
 
           return {
             // see https://github.com/apollostack/apollo-client/blob/master/src/queries/store.ts#L28-L36
@@ -173,19 +181,27 @@ const withList = (options) => {
             loading,
             loadingInitial,
             loadingMore,
-            [ propertyName ]: results,
+            [ propertyName ]: resultsMinusPreload,
             totalCount,
             refetch,
             networkStatus,
             error,
-            count: results && results.length,
+            count: resultsMinusPreload && resultsMinusPreload.length,
 
             // regular load more (reload everything)
             loadMore(providedTerms) {
               // if new terms are provided by presentational component use them, else default to incrementing current limit once
-              const newTerms = typeof providedTerms === 'undefined' ? { /*...props.ownProps.terms,*/ ...props.ownProps.paginationTerms, limit: results.length + props.ownProps.paginationTerms.itemsPerPage } : providedTerms;
-
-              props.ownProps.setPaginationTerms(newTerms);
+              if(typeof providedTerms === 'undefined') {
+                let newLimit = resultsMinusPreload.length + props.ownProps.paginationTerms.itemsPerPage;
+                props.ownProps.setPaginationTerms({
+                  /*...props.ownProps.terms,*/
+                  ...props.ownProps.paginationTerms,
+                  limit: newLimit + preload,
+                  displayLimit: newLimit
+                })
+              } else {
+                props.ownProps.setPaginationTerms(providedTerms);
+              }
             },
 
             // incremental loading version (only load new content)
@@ -193,8 +209,22 @@ const withList = (options) => {
             loadMoreInc(providedTerms) {
 
               // get terms passed as argument or else just default to incrementing the offset
-              const newTerms = typeof providedTerms === 'undefined' ? { ...props.ownProps.terms, ...props.ownProps.paginationTerms, offset: results.length } : providedTerms;
-
+              let newTerms = null;
+              if(typeof providedTerms === 'undefined') {
+                newTerms = {
+                  ...props.ownProps.terms,
+                  ...props.ownProps.paginationTerms,
+                  offset: results.length
+                }
+              } else {
+                newTerms = providedTerms;
+              }
+              
+              props.ownProps.setPaginationTerms({
+                ...props.ownProps.setPaginationTerms,
+                displayLimit: displayLimit + props.ownProps.paginationTerms.itemsPerPage
+              });
+              
               return props.data.fetchMore({
                 variables: { terms: newTerms }, // ??? not sure about 'terms: newTerms'
                 updateQuery(previousResults, { fetchMoreResult }) {
