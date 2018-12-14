@@ -27,6 +27,18 @@ import { graphql } from 'react-apollo';
 import gql from 'graphql-tag';
 import { getFragment, getFragmentName, getCollection } from 'meteor/vulcan:lib';
 
+function withEditProps({ownProps, mutate}) {
+  return {
+    editMutation: (args) => {
+      const { documentId, set, unset } = args;
+      return mutate({ 
+        variables: { documentId, set, unset }
+        // note: updateQueries is not needed for editing documents
+      });
+    }
+  }
+}
+
 export default function withEdit(options) {
 
   const { collectionName } = options;
@@ -48,15 +60,7 @@ export default function withEdit(options) {
     options: () => ({
       ssr: false,
     }),
-    props: ({ ownProps, mutate }) => ({
-      editMutation: (args) => {
-        const { documentId, set, unset } = args;
-        return mutate({ 
-          variables: { documentId, set, unset }
-          // note: updateQueries is not needed for editing documents
-        });
-      }
-    }),
+    props: withEditProps
   });
 
 }
