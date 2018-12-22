@@ -9,6 +9,7 @@ import { createError } from 'apollo-errors';
 
 const defaultOptions = {
   cacheMaxAge: 300,
+  maxCountQuery: 500
 };
 
 // note: for some reason changing resolverOptions to "options" throws error
@@ -80,7 +81,7 @@ export function getDefaultResolvers(options) {
 
         if (enableTotal) {
           // get total count of documents matching the selector
-          data.totalCount = await Connectors.count(collection, selector);
+          data.totalCount = await Connectors.count(collection, selector, {limit: resolverOptions.maxCountQuery});
         }
 
         // return results

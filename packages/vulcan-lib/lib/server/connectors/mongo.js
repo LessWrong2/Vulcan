@@ -23,7 +23,7 @@ DatabaseConnectors.mongo = {
     return await collection.find(convertSelector(selector), options).fetch();
   },
   count: async (collection, selector = {}, options = {}) => {
-    return await collection.find(convertSelector(selector), options).count();
+    return await collection.find(convertSelector(selector), options).count(options);
   },
   create: async (collection, document, options = {}) => {
     return await collection.insert(document);
