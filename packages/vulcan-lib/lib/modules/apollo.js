@@ -94,6 +94,8 @@ const meteorClientConfig = networkInterfaceConfig => {
       }
       return null;
     },
+    
+    ssrForceFetchDelay: Meteor.isServer ? 0 : 5000,
   }
 };
 
