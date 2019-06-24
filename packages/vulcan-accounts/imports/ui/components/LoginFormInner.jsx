@@ -80,6 +80,7 @@ export class AccountsLoginFormInner extends TrackerComponent {
 
   componentDidMount() {
     let changeState = Session.get(KEY_PREFIX + 'state');
+    console.log("Getting changeState: ", KEY_PREFIX + 'state', changeState)
     switch (changeState) {
       case 'enrollAccountToken':
         this.setState(prevState => ({
